@@ -1,0 +1,457 @@
+<html>
+<head>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://vjs.zencdn.net/6.6.3/video-js.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/aws-sdk/2.543.0/aws-sdk.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/webcamjs/1.0.25/webcam.min.js"></script>
+
+    <style>
+        #camera {
+            width: 640px;
+            height: 480px;
+            border: 5px solid red;
+        }
+
+        #snapshot {
+          border: 0px
+        }
+
+        #results {
+            width: 640px;
+            height: 480px;
+            border: 5px solid red;
+        }
+
+        #detected {
+            width: 320px;
+            height: 240px;
+            border: 0px;
+        }
+
+        #solved {
+            width: 320px;
+            height: 240px;
+            border: 0px;
+        }
+
+        table {
+            border-collapse: collapse;
+            font-family: Calibri, sans-serif;
+        }
+
+        colgroup, tbody {
+            border: solid medium;
+        }
+
+        td {
+            border: solid thin;
+            height: 1.4em;
+            width: 1.4em;
+            text-align: center;
+            padding: 0;
+        }
+
+        .divSquare {
+            width: 30%;
+            margin: 4px;
+            border: 2px solid black;
+            float: left
+        }
+    </style>
+
+    <title>Claranet Sudoku Solver</title>
+</head>
+<body>
+<div>
+    <center>
+        <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAj8AAAB1CAYAAACh8IAUAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAABBlpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuNS1jMDIxIDc5LjE1NTc3MiwgMjAxNC8wMS8xMy0xOTo0NDowMCAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wTU09Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9tbS8iIHhtbG5zOnN0UmVmPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvc1R5cGUvUmVzb3VyY2VSZWYjIiB4bWxuczp4bXA9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC8iIHhtbG5zOmRjPSJodHRwOi8vcHVybC5vcmcvZGMvZWxlbWVudHMvMS4xLyIgeG1wTU06T3JpZ2luYWxEb2N1bWVudElEPSJ1dWlkOjVEMjA4OTI0OTNCRkRCMTE5MTRBODU5MEQzMTUwOEM4IiB4bXBNTTpEb2N1bWVudElEPSJ4bXAuZGlkOjdBRkMwRjg0REI1NTExRTRBNDMxOUZDQzUxMkVFOTY3IiB4bXBNTTpJbnN0YW5jZUlEPSJ4bXAuaWlkOjdBRkMwRjgzREI1NTExRTRBNDMxOUZDQzUxMkVFOTY3IiB4bXA6Q3JlYXRvclRvb2w9IkFkb2JlIElsbHVzdHJhdG9yIENTNS4xIj4gPHhtcE1NOkRlcml2ZWRGcm9tIHN0UmVmOmluc3RhbmNlSUQ9InhtcC5paWQ6MTYzQzY0MDQ5RUMxRTQxMUJDQzg4MEFFODkwMjQxMTQiIHN0UmVmOmRvY3VtZW50SUQ9InhtcC5kaWQ6MTYzQzY0MDQ5RUMxRTQx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" alt="claranet" style="padding-right: 100px; padding-top: 10px; padding-bottom:10px;"/>
+    </center>
+</div>
+<div>
+    <div id="camera" class="divSquare"></div>
+    <div id="snapshot" class="divSquare">
+      <center><input type="image" src=" data:image/png;base64,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" value="Take Snapshot" onClick="take_snapshot()"></center>
+      <br/>
+      <p>Using the webcam, line up a Sudoku puzzle such that the numbers are as horizontal as possible and only numbers from the puzzle are visisble. The puzzle needs to be a 9x9 grid and not have an empty top line. Click the camera icon above once you are happy and the system will then attempt to extract and solve the puzzle.
+    </div>
+    <div id="results" class="divSquare"></div>
+    <div id="detected" class="divSquare">
+        <table>
+            <caption>Detected Puzzle</caption>
+            <colgroup>
+                <col>
+                <col>
+                <col>
+            <colgroup>
+                <col>
+                <col>
+                <col>
+            <colgroup>
+                <col>
+                <col>
+                <col>
+            <tbody>
+            <tr>
+                <td id="det11">
+                <td id="det12">
+                <td id="det13">
+                <td id="det14">
+                <td id="det15">
+                <td id="det16">
+                <td id="det17">
+                <td id="det18">
+                <td id="det19">
+            <tr>
+                <td id="det21">
+                <td id="det22">
+                <td id="det23">
+                <td id="det24">
+                <td id="det25">
+                <td id="det26">
+                <td id="det27">
+                <td id="det28">
+                <td id="det29">
+            <tr>
+                <td id="det31">
+                <td id="det32">
+                <td id="det33">
+                <td id="det34">
+                <td id="det35">
+                <td id="det36">
+                <td id="det37">
+                <td id="det38">
+                <td id="det39">
+            <tbody>
+            <tr>
+                <td id="det41">
+                <td id="det42">
+                <td id="det43">
+                <td id="det44">
+                <td id="det45">
+                <td id="det46">
+                <td id="det47">
+                <td id="det48">
+                <td id="det49">
+            <tr>
+                <td id="det51">
+                <td id="det52">
+                <td id="det53">
+                <td id="det54">
+                <td id="det55">
+                <td id="det56">
+                <td id="det57">
+                <td id="det58">
+                <td id="det59">
+            <tr>
+                <td id="det61">
+                <td id="det62">
+                <td id="det63">
+                <td id="det64">
+                <td id="det65">
+                <td id="det66">
+                <td id="det67">
+                <td id="det68">
+                <td id="det69">
+            <tbody>
+            <tr>
+                <td id="det71">
+                <td id="det72">
+                <td id="det73">
+                <td id="det74">
+                <td id="det75">
+                <td id="det76">
+                <td id="det77">
+                <td id="det78">
+                <td id="det79">
+            <tr>
+                <td id="det81">
+                <td id="det82">
+                <td id="det83">
+                <td id="det84">
+                <td id="det85">
+                <td id="det86">
+                <td id="det87">
+                <td id="det88">
+                <td id="det89">
+            <tr>
+                <td id="det91">
+                <td id="det92">
+                <td id="det93">
+                <td id="det94">
+                <td id="det95">
+                <td id="det96">
+                <td id="det97">
+                <td id="det98">
+                <td id="det99">
+        </table>
+    </div>
+    <div id="solved" class="divSquare">
+        <table>
+            <caption>Solved Puzzle</caption>
+            <colgroup>
+                <col>
+                <col>
+                <col>
+            <colgroup>
+                <col>
+                <col>
+                <col>
+            <colgroup>
+                <col>
+                <col>
+                <col>
+            <tbody>
+            <tr>
+                <td id="sol11">
+                <td id="sol12">
+                <td id="sol13">
+                <td id="sol14">
+                <td id="sol15">
+                <td id="sol16">
+                <td id="sol17">
+                <td id="sol18">
+                <td id="sol19">
+            <tr>
+                <td id="sol21">
+                <td id="sol22">
+                <td id="sol23">
+                <td id="sol24">
+                <td id="sol25">
+                <td id="sol26">
+                <td id="sol27">
+                <td id="sol28">
+                <td id="sol29">
+            <tr>
+                <td id="sol31">
+                <td id="sol32">
+                <td id="sol33">
+                <td id="sol34">
+                <td id="sol35">
+                <td id="sol36">
+                <td id="sol37">
+                <td id="sol38">
+                <td id="sol39">
+            <tbody>
+            <tr>
+                <td id="sol41">
+                <td id="sol42">
+                <td id="sol43">
+                <td id="sol44">
+                <td id="sol45">
+                <td id="sol46">
+                <td id="sol47">
+                <td id="sol48">
+                <td id="sol49">
+            <tr>
+                <td id="sol51">
+                <td id="sol52">
+                <td id="sol53">
+                <td id="sol54">
+                <td id="sol55">
+                <td id="sol56">
+                <td id="sol57">
+                <td id="sol58">
+                <td id="sol59">
+            <tr>
+                <td id="sol61">
+                <td id="sol62">
+                <td id="sol63">
+                <td id="sol64">
+                <td id="sol65">
+                <td id="sol66">
+                <td id="sol67">
+                <td id="sol68">
+                <td id="sol69">
+            <tbody>
+            <tr>
+                <td id="sol71">
+                <td id="sol72">
+                <td id="sol73">
+                <td id="sol74">
+                <td id="sol75">
+                <td id="sol76">
+                <td id="sol77">
+                <td id="sol78">
+                <td id="sol79">
+            <tr>
+                <td id="sol81">
+                <td id="sol82">
+                <td id="sol83">
+                <td id="sol84">
+                <td id="sol85">
+                <td id="sol86">
+                <td id="sol87">
+                <td id="sol88">
+                <td id="sol89">
+            <tr>
+                <td id="sol91">
+                <td id="sol92">
+                <td id="sol93">
+                <td id="sol94">
+                <td id="sol95">
+                <td id="sol96">
+                <td id="sol97">
+                <td id="sol98">
+                <td id="sol99">
+        </table>
+    </div>
+</div>
+<script language="JavaScript">
+
+    jQuery(function ($) {
+    });
+
+    Webcam.set({
+        width: 640,
+        height: 480,
+        image_format: 'jpeg',
+        jpeg_quality: 90
+    });
+    Webcam.attach('#camera');
+
+    /**
+     * Convert a base64 string in a Blob according to the data and contentType.
+     *
+     * @param b64Data {String} Pure base64 string without contentType
+     * @param contentType {String} the content type of the file i.e (image/jpeg - image/png - text/plain)
+     * @param sliceSize {Int} SliceSize to process the byteCharacters
+     * @see http://stackoverflow.com/questions/16245767/creating-a-blob-from-a-base64-string-in-javascript
+     * @return Blob
+     */
+    function b64toBlob(b64Data, contentType, sliceSize) {
+            contentType = contentType || '';
+            sliceSize = sliceSize || 512;
+
+            var byteCharacters = atob(b64Data);
+            var byteArrays = [];
+
+            for (var offset = 0; offset < byteCharacters.length; offset += sliceSize) {
+                var slice = byteCharacters.slice(offset, offset + sliceSize);
+
+                var byteNumbers = new Array(slice.length);
+                for (var i = 0; i < slice.length; i++) {
+                    byteNumbers[i] = slice.charCodeAt(i);
+                }
+
+                var byteArray = new Uint8Array(byteNumbers);
+
+                byteArrays.push(byteArray);
+            }
+
+          var blob = new Blob(byteArrays, {type: contentType});
+          return blob;
+    }
+
+    <!-- Code to handle taking the snapshot and displaying it locally -->
+    function take_snapshot() {
+
+        // take snapshot and get image data
+        Webcam.snap(function (data_uri) {
+            // display results in page
+            document.getElementById('results').innerHTML = '<img src="' + data_uri + '"/>';
+
+            for (var i = 0; i < 9; i++) {
+                for (var j = 0; j < 9; j++) {
+                    $("#det" + (i + 1) + (j + 1)).text("")
+                    $("#sol" + (i + 1) + (j + 1)).text("")
+                    $("#det" + (i + 1) + (j + 1)).css("font-weight", "normal")
+                    $("#sol" + (i + 1) + (j + 1)).css("font-weight", "normal")
+                }
+            }
+
+            $.ajax({
+                url: "${apigateway_url}/signer",
+                type: "POST",
+                crossDomain: true,
+                success: function (response) {
+                    console.log(response)
+
+                    const bucket = response.Bucket;
+                    const key = response.Key;
+
+                    var block = data_uri.split(";");
+                    var contentType = block[0].split(":")[1];
+                    var realData = block[1].split(",")[1];
+                    var blob = b64toBlob(realData, contentType);
+
+                    $.ajax({
+                        url: response.Uri,
+                        type: "PUT",
+                        data: blob,
+                        crossDomain: true,
+                        cache: false,
+                        contentType: contentType,
+                        processData: false,
+                        success: function () {
+                            $.ajax({
+                                url: "${apigateway_url}/find",
+                                type: "POST",
+                                crossDomain: true,
+                                data: JSON.stringify({
+                                    "Bucket": bucket,
+                                    "Key": key,
+                                }),
+                                contentType: "application/json",
+                                dataType: "json",
+                                success: function (response) {
+                                    console.log(response)
+                                    for (var i = 0; i < response.Rows.length; i++) {
+                                        var row = response.Rows[i].split("");
+                                        for (var j = 0; j < row.length; j++) {
+                                            if (row[j] > 0) {
+                                                $("#det" + (i + 1) + (j + 1)).text(row[j])
+                                                $("#det" + (i + 1) + (j + 1)).css("font-weight", "bold")
+                                                $("#sol" + (i + 1) + (j + 1)).css("font-weight", "bold")
+                                            }
+                                        }
+                                    }
+
+                                    $.ajax({
+                                        url: "${apigateway_url}/solve",
+                                        type: "POST",
+                                        crossDomain: true,
+                                        data: JSON.stringify(response),
+                                        contentType: "application/json",
+                                        dataType: "json",
+                                        success: function (response) {
+                                            console.log(response)
+                                            for (var i = 0; i < response.Rows.length; i++) {
+                                                var row = response.Rows[i].split("");
+                                                for (var j = 0; j < row.length; j++) {
+                                                    if (row[j] > 0) {
+                                                        $("#sol" + (i + 1) + (j + 1)).text(row[j])
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        error: function (xhr, status) {
+                                            console.log(status)
+                                        }
+                                    });
+                                },
+                                error: function (xhr, status) {
+                                    console.log(status)
+                                }
+                            });
+
+                        },
+                        error: function (xhr, status) {
+                            console.log(status)
+                        }
+                    });
+                },
+                error: function (xhr, status) {
+                    console.log(status)
+                }
+            });
+
+        });
+    }
+
+    console.log("Page loaded")
+</script>
+</body>
+</html>
